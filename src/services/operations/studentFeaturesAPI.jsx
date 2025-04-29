@@ -45,29 +45,29 @@ export async function buyCourse(token , courses , userDetails , navigate , dispa
         console.log("User Details:", userDetails);
         console.log("Auth Token:", token);
 
-        //initialize order : ye krne k liye backend call krdiya h 
+        //initialize order : ye krne k liye backend call krdiya h
         //capture payment
-        const orderResponse = await apiConnector("POST" , COURSE_PAYMENT_API , 
-                                   {courses} , 
+        const orderResponse = await apiConnector("POST" , COURSE_PAYMENT_API ,
+                                   {courses} ,
                                 {
                                     Authorization: `Bearer ${token}`,
                                 });
-                   
+
          console.log("ORDER RESPONSE:", orderResponse.data);
 
         if(!orderResponse.data.success){
-              throw new Error(orderResponse.data.message)         
-         }      
+              throw new Error(orderResponse.data.message)
+         }
          console.log("PAYMENT RESPONSE FROM BACKEND............", orderResponse.data)
 
           // **Ensure user details exist**
         if (!userDetails || !userDetails.firstName || !userDetails.email) {
             throw new Error("Invalid user details");
         }
-         
+
          //options
          const options = {
-            key: process.env.RAZORPAY_KEY_ID,
+            key: process.env._ID,
             currency: orderResponse.data.data.currency,
             amount: `${orderResponse.data.data.amount}`,
             order_id: orderResponse.data.data.id,
@@ -99,7 +99,7 @@ export async function buyCourse(token , courses , userDetails , navigate , dispa
     }
 }
 
-//operation me vo fucntion likhtey h forntend k jo backend ki api ko call krtey h 
+//operation me vo fucntion likhtey h forntend k jo backend ki api ko call krtey h
 //  https://checkout.razorpay.com/v1/checkout.js
 // Verify the Payment
 async function verifyPayment(bodyData, token, navigate, dispatch) {
