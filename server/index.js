@@ -26,12 +26,28 @@ database.connect();
 // Middlewares
 app.use(express.json());
 app.use(cookieParser());
+// app.use(
+// 	cors({
+// 		origin: "http://localhost:3000",
+// 		credentials: true,
+// 	})
+// );
+
+const allowedOrigins = [
+  "http://localhost:3000", // Local development
+  "https://studynotion-theta-gules.vercel.app", // Deployed frontend
+];
+
 app.use(
-	cors({
-		origin: "http://localhost:3000",
-		credentials: true,
-	})
+  cors({
+      origin: allowedOrigins,
+      credentials: true,
+  })
 );
+
+// Handle preflight requests (important for some requests like login)
+app.options("*", cors());
+
 app.use(
 	fileUpload({
 		useTempFiles: true,
