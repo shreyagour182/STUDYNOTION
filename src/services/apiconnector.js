@@ -1,25 +1,53 @@
 import axios from "axios";
 
+// Create Axios instance with global configurations
 export const axiosInstance = axios.create({
-  withCredentials: true,  // Ye backend ke sath match hona chahiye
+    baseURL: "https://studynotion-z39s.onrender.com", // Update this with your backend URL
+    withCredentials: true, // Ensures cookies/auth tokens are sent
 });
 
-export const apiConnector = async (method, url, bodyData, headers, params) => {
-  try {
-    const response = await axiosInstance({
-      method: method,
-      url: url,
-      data: bodyData || null,
-      headers: headers || {},
-      params: params || null,  withCredentials: true,
-    });
-    return response; // ye correct h
+// Function to handle API requests dynamically
+export const apiConnector = async (method, url, bodyData = null, headers = {}, params = null) => {
+    try {
+        const response = await axiosInstance({
+            method: method,
+            url: url,
+            data: bodyData,
+            headers: headers,
+            params: params,
+        });
 
-  } catch (error) {
-    console.error("API Error:", error);
-    throw error;
-  }
+        return response;
+    } catch (error) {
+        console.error("API Error:", error);
+        throw error;
+    }
 };
+
+
+// import axios from "axios";
+
+// export const axiosInstance = axios.create({
+//   baseURL: "https://studynotion-z39s.onrender.com", // Ye backend ke sath match hona chahiye
+//   withCredentials: true,  // Ye backend ke sath match hona chahiye
+// });
+
+// export const apiConnector = async (method, url, bodyData, headers, params) => {
+//   try {
+//     const response = await axiosInstance({
+//       method: method,
+//       url: url,
+//       data: bodyData || null,
+//       headers: headers || {},
+//       params: params || null,  withCredentials: true,
+//     });
+//     return response; // ye correct h
+
+//   } catch (error) {
+//     console.error("API Error:", error);
+//     throw error;
+//   }
+// };
 // import axios from "axios";
 
 // // Create an axios instance
