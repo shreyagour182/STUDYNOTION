@@ -1,6 +1,4 @@
 
-// Loading environment variables from .env file
-dotenv.config();
 
 const express = require("express");
 const app = express();
@@ -17,6 +15,8 @@ const cors = require("cors"); // if you want your backend to entertain the reque
 const {cloudinaryConnect } = require("./config/cloudinary");
 const fileUpload = require("express-fileupload");
 const dotenv = require("dotenv");
+// Loading environment variables from .env file
+dotenv.config();
 
 // Setting up port number
 const PORT = process.env.PORT || 5001;
