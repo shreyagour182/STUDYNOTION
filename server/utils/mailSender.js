@@ -1,18 +1,21 @@
 const nodemailer = require("nodemailer");
 require('dotenv').config();
 
-// ye setup hai for sending mails , ab isko as a function use krenge OTP vale schema k under
 const mailSender = async (email, title, body) => {
     try{
         console.log('Setting up transporter...');
             let transporter = nodemailer.createTransport({
-                host:process.env.MAIL_HOST,
+                // Nodemailer को पोर्ट 587 (STARTTLS) का उपयोग करने के लिए सेट करें
+                host: process.env.MAIL_HOST,
+                port: 587,          // <--- STARTTLS के लिए पोर्ट 587 सेट करें
                 auth:{
                     user: process.env.MAIL_USER,
                     pass: process.env.MAIL_PASS,
                 },
-                // Note: secure: true uses port 465. If you need port 587, use secure: false and port: 587
-                secure: true,
+                secure: false,      // <--- secure: false का मतलब है STARTTLS का उपयोग करना
+                tls: {
+                    ciphers: 'SSLv3'
+                }
             })
             console.log('Sending email...');
             let info = await transporter.sendMail({
@@ -25,8 +28,8 @@ const mailSender = async (email, title, body) => {
             return info;
     }
     catch(error) {
-        // Log the full error object for detailed debugging in Render logs
-        console.error("MAIL SENDER ERROR:", error);
+        // Log the full error for debugging in Render logs
+        console.error("MAIL SENDER ERROR: The email could not be delivered.", error);
         console.error("Nodemailer Message:", error.message);
     }
 }
