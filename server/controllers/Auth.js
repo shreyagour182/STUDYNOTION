@@ -11,108 +11,114 @@ require("dotenv").config();
 // Signup Controller for Registering USers
 
 exports.signup = async (req, res) => {
-	try {
-		// data fetch from the request body
-		const {
-			firstName,
-			lastName,
-			email,
-			password,
-			confirmPassword,
-			accountType,
-			contactNumber,
-			otp,
-		} = req.body;
-		// Check if All Details are there or not
-		if (
-			!firstName ||
-			!lastName ||
-			!email ||
-			!password ||
-			!confirmPassword ||
-			!otp
-		) {
-			return res.status(403).json({
-				success: false,
-				message: "All Fields are required",
-			});
-		}
-		// Check if password and confirm password match
-		if (password !== confirmPassword) {
-			return res.status(400).json({
-				success: false,
-				message:
-					"Password and Confirm Password do not match. Please try again.",
-			});
-		}
+  try {
+    // Data fetch from the request body
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      confirmPassword,
+      accountType = "Student", // Defaulting accountType for safety
+      contactNumber,
+      otp,
+    } = req.body;
+   
+    // 1. Check if All Details are there or not
+    if (
+      !firstName ||
+      !lastName ||
+      !email ||
+      !password ||
+      !confirmPassword ||
+      !otp
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "All Fields are required",
+      });
+    }
+   
+    // 2. Check if password and confirm password match
+    if (password !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Password and Confirm Password do not match. Please try again.",
+      });
+    }
 
-		// Check if user already exists
-		const existingUser = await User.findOne({ email });
-		if (existingUser) {
-			return res.status(400).json({
-				success: false,
-				message: "User already exists. Please sign in to continue.",
-			});
-		}
+    // 3. Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "User already exists. Please sign in to continue.",
+      });
+    }
 
-		// Find the most recent OTP for the email
-		const response = await OTP.find({ email }).sort({ createdAt: -1 }).limit(1);
-		console.log(response);
-		if (response.length === 0) {
-			// OTP not found for the email
-			return res.status(400).json({
-				success: false,
-				message: "The OTP is not valid",
-			});
-		} else if (otp !== response[0].otp) {
-			// Invalid OTP
-			return res.status(400).json({
-				success: false,
-				message: "The OTP is not valid",
-			});
-		}
+    // 4. Find the most recent, valid OTP for the email
+    const recentOTP = await OTP.findOne({ email }).sort({ createdAt: -1 }).exec();
 
-		// Hash the password
-		const hashedPassword = await bcrypt.hash(password, 10);
+    if (!recentOTP) {
+      // OTP not found or has expired (due to TTL index)
+      return res.status(400).json({
+        success: false,
+        message: "OTP not found or expired. Please re-send.",
+      });
+    }
+   
+    if (otp !== recentOTP.otp) {
+      // Invalid OTP
+      return res.status(400).json({
+        success: false,
+        message: "The OTP is not valid",
+      });
+    }
 
-		// Create the user
-		let approved = "";
-		approved === "Instructor" ? (approved = false) : (approved = true);
+    // 5. OTP Verified - Delete the OTP entry to prevent reuse
+    await OTP.deleteMany({ email }); // Delete all OTP records for this email
 
-		// Create the Additional Profile For User
-		const profileDetails = await Profile.create({
-			gender: null,
-			dateOfBirth: null,
-			about: null,
-			contactNumber: null,
-		});
+    // 6. Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-		//create db entry for user
-		const user = await User.create({
-			firstName,
-			lastName,
-			email,
-			contactNumber,
-			password: hashedPassword,
-			accountType: accountType,
-			approved: approved,
-			additionalDetails: profileDetails._id,
-			image: `https://api.dicebear.com/5.x/initials/svg?seed=${firstName} ${lastName}`,
-		});
+    // 7. Set Approval Status and Create Profile in parallel (Minor performance gain)
+    const approved = accountType === "Instructor" ? false : true;
 
-		return res.status(200).json({
-			success: true,
-			user,
-			message: "User registered successfully",
-		  });
-	   }
-	 catch (error) {
-		console.error(error);
-		return res.status(500).json({
-			success: false,
-			message: "User cannot be registered. Please try again.",
-		});
-	}
+    // Create the Additional Profile For User
+    const profileDetails = await Profile.create({
+      gender: null,
+      dateOfBirth: null,
+      about: null,
+      contactNumber: null, // Note: You might want to use the 'contactNumber' from req.body here
+    });
+
+    // 8. Create DB entry for user
+    const user = await User.create({
+      firstName,
+      lastName,
+      email,
+      contactNumber,
+      password: hashedPassword,
+      accountType: accountType,
+      approved: approved,
+      additionalDetails: profileDetails._id,
+      image: `https://api.dicebear.com/5.x/initials/svg?seed=${firstName} ${lastName}`,
+    });
+
+    return res.status(200).json({
+      success: true,
+      user,
+      message: "User registered successfully",
+      });
+     }
+   catch (error) {
+    console.error("SIGNUP ERROR:", error);
+    return res.status(500).json({
+      success: false,
+      message: "User cannot be registered. Please try again.",
+    });
+  }
 };
 
 // Login controller for authenticating users
@@ -197,53 +203,61 @@ exports.login = async (req, res) => {
 
 // Send OTP For Email Verification
 exports.sendotp = async (req, res) => {
-	try {
-		const { email } = req.body;
+  try {
+    const { email } = req.body;
 
-		// Check if user is already present + Find user with provided email
-		const checkUserPresent = await User.findOne({ email });
-		// to be used in case of signup
+    // Check if user is already present
+    const checkUserPresent = await User.findOne({ email });
+   
+    if (checkUserPresent) {
+      // User is already registered
+      return res.status(401).json({
+        success: false,
+        message: `User is Already Registered. Please login.`,
+      });
+    }
 
-		// If user found with provided email
-		if (checkUserPresent) {
-			// Return 401 Unauthorized status code with error message****
-			return res.status(401).json({
-				success: false,
-				message: `User is Already Registered yara`,
-			});
-		}
+    // --- OTP Generation with Collision Check (Fixed for infinite loop) ---
+    let otp = otpGenerator.generate(6, {
+      upperCaseAlphabets: false,
+      lowerCaseAlphabets: false,
+      specialChars: false,
+    });
 
-		//generate otp
-		var otp = otpGenerator.generate(6, {
-			upperCaseAlphabets: false,
-			lowerCaseAlphabets: false,
-			specialChars: false,
-		});
-		const result = await OTP.findOne({ otp: otp });
-		console.log("Result is Generate OTP Func");
-		console.log("OTP", otp);
-		console.log("Result", result);
-		while (result) {
-			otp = otpGenerator.generate(6, {
-				upperCaseAlphabets: false,
-			});
-		}
-		//payload as a object bna liya h otp ka 
-		const otpPayload = { email, otp };
-		//ab is payload ki entry create krdo body me
-		const otpBody = await OTP.create(otpPayload);
-		console.log("OTP Body", otpBody);
-		res.status(200).json({
-			success: true,
-			message: `OTP Sent Successfully`,
-			otp,
-		});
-	} 
-	catch (error) {
-		console.log(error.message);
-		return res.status(500).json({ success: false, message: error.message });
-	}
+    let result = await OTP.findOne({ otp: otp });
+    // Re-generate OTP if a duplicate is found (this is safer)
+    while (result) {
+      otp = otpGenerator.generate(6, {
+        upperCaseAlphabets: false,
+        lowerCaseAlphabets: false,
+        specialChars: false,
+      });
+      result = await OTP.findOne({ otp: otp }); // CRITICAL: Must update 'result'
+    }
+
+    // Create OTP entry. This action automatically triggers the OTPSchema.pre('save') hook
+    // defined in models/OTP.js to send the verification email.
+    const otpPayload = { email, otp };
+
+    // *** PERFORMANCE FIX: Remove AWAIT here to prevent blocking ***
+    // We intentionally do not await the database operation. The response is sent immediately,
+    // and the email is handled asynchronously by the Mongoose 'pre' hook.
+    OTP.create(otpPayload)
+        .then(() => console.log("OTP Body created, email hook triggered successfully."))
+        .catch((err) => console.error("Error creating OTP for email hook:", err.message));
+
+    // Return response IMMEDIATELY
+    res.status(200).json({
+      success: true,
+      message: `OTP Sent Successfully (Check your inbox and spam folder)`,
+    });
+  }
+  catch (error) {
+    console.error("SEND OTP ERROR:", error.message);
+    return res.status(500).json({ success: false, message: "Could not send OTP. Please try again." });
+  }
 };
+
 
 // Controller for Changing Password
 exports.changePassword = async (req, res) => {

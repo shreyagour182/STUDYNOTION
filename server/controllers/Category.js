@@ -1,6 +1,9 @@
 const { default: mongoose } = require("mongoose");
 const Category = require("../models/Category");
 
+console.log("Category Controller file is loading."); // <--- ADD THIS
+
+
 function getRandomInt(max) {
   return Math.floor(Math.random() * max);
 }
