@@ -1,40 +1,52 @@
-const nodemailer = require("nodemailer");
+const sgMail = require('@sendgrid/mail');
 require('dotenv').config();
 
-const mailSender = async (email, title, body) => {
-    try{
-        console.log('Setting up SendGrid transporter...');
-            let transporter = nodemailer.createTransport({
-                host: process.env.MAIL_HOST,
-                port: 587,
-                secure: false,
-                auth:{
-                    user: process.env.MAIL_USER,
-                    pass: process.env.MAIL_PASS,
-                },
-            })
-           
-            // Send email asynchronously and log outcome
-            transporter.sendMail({
-                // CRITICAL FIX: Use the verified email address directly.
-                from: `StudyNotion || CodeHelp - by Shreya <${process.env.MAIL_SENDER_EMAIL}>`,
-                to: `${email}`,
-                subject: `${title}`,
-                html: `${body}`,
-            })
-            .then(info => console.log("Email sent successfully (Async). Info:", info))
-            .catch(error => {
-                console.error("==========================================");
-                console.error("MAIL SENDER FAILED. Connection or Auth Error:");
-                console.error("==========================================");
-                console.error(error.message);
-                console.error(error);
-            });
+// SendGrid API Key को सीधे SDK में सेट करें
+sgMail.setApiKey(process.env.MAIL_PASS);
 
-    }
-    catch(error) {
-        console.error("FATAL ERROR IN TRANSPORTER SETUP:", error);
-    }
-}
+// MAIL_SENDER_EMAIL वेरिएबल से FROM एड्रेस सेट करें
+const SENDER_EMAIL = process.env.MAIL_SENDER_EMAIL;
+
+const mailSender = async (email, title, body) => {
+    // अगर Sender Email सेट नहीं है, तो तुरंत लौट जाएँ
+    if (!SENDER_EMAIL) {
+        console.error("FATAL: MAIL_SENDER_EMAIL is not set in environment variables.");
+        return;
+    }
+
+    // ईमेल बनाने के लिए SendGrid के फॉर्मेट का उपयोग करें
+    const msg = {
+        to: email,
+        from: SENDER_EMAIL, // CRITICAL: यह SendGrid में Verified Email होना चाहिए
+        subject: title,
+        html: body,
+    };
+
+    try {
+        console.log('Attempting to send email via SendGrid HTTP API...');
+
+        // HTTP API कॉल
+        await sgMail.send(msg);
+
+        console.log("Email sent successfully via SendGrid API.");
+        return true;
+
+    } catch (error) {
+        console.error("==========================================");
+        console.error("SENDGRID HTTP API FAILED:");
+
+        // SendGrid API से विशिष्ट त्रुटियाँ (जैसे Authentication, Forbidden) प्राप्त करें
+        if (error.response) {
+            console.error("Status:", error.response.statusCode);
+            console.error("Body:", JSON.stringify(error.response.body));
+        } else {
+            console.error("Error:", error.message);
+        }
+
+        console.error("==========================================");
+        // OTP body बनाने वाले फंक्शन को यह सुनिश्चित करने के लिए रिटर्न करें कि HTTP 200 गया हो
+        return false;
+    }
+};
 
 module.exports = mailSender;
