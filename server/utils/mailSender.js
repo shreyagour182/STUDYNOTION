@@ -1,18 +1,22 @@
 const nodemailer = require("nodemailer");
 require('dotenv').config();
 
+// यह फंक्शन अब SendGrid के SMTP होस्ट, यूजरनेम और पोर्ट का उपयोग करता है
 const mailSender = async (email, title, body) => {
     try{
-        console.log('Setting up secure transporter (Port 465)...'); // Updated log
+        console.log('Setting up SendGrid transporter...');
             let transporter = nodemailer.createTransport({
+                // SendGrid Host
                 host: process.env.MAIL_HOST,
-                port: 465, // <-- SWITCHING TO SECURE SSL PORT
+                // SendGrid uses port 587 with STARTTLS
+                port: 587,
+                secure: false,
                 auth:{
+                    // SendGrid requires the username to be 'apikey'
                     user: process.env.MAIL_USER,
+                    // The password must be the actual SendGrid API Key
                     pass: process.env.MAIL_PASS,
                 },
-                secure: true, // <-- SETTING TO TRUE FOR PORT 465
-                // tls block removed as it's not needed for standard secure connection
             })
            
             // Send email asynchronously and log outcome
@@ -31,7 +35,6 @@ const mailSender = async (email, title, body) => {
                 console.error(error);
             });
 
-            // No return here, as the outer controller is set to proceed without waiting.
     }
     catch(error) {
         console.error("FATAL ERROR IN TRANSPORTER SETUP:", error);
