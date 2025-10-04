@@ -3,34 +3,38 @@ require('dotenv').config();
 
 const mailSender = async (email, title, body) => {
     try{
-        console.log('Setting up transporter...');
+        console.log('Setting up secure transporter (Port 465)...'); // Updated log
             let transporter = nodemailer.createTransport({
-                // Nodemailer को पोर्ट 587 (STARTTLS) का उपयोग करने के लिए सेट करें
                 host: process.env.MAIL_HOST,
-                port: 587,          // <--- STARTTLS के लिए पोर्ट 587 सेट करें
+                port: 465, // <-- SWITCHING TO SECURE SSL PORT
                 auth:{
                     user: process.env.MAIL_USER,
                     pass: process.env.MAIL_PASS,
                 },
-                secure: false,      // <--- secure: false का मतलब है STARTTLS का उपयोग करना
-                tls: {
-                    ciphers: 'SSLv3'
-                }
+                secure: true, // <-- SETTING TO TRUE FOR PORT 465
+                // tls block removed as it's not needed for standard secure connection
             })
-            console.log('Sending email...');
-            let info = await transporter.sendMail({
+           
+            // Send email asynchronously and log outcome
+            transporter.sendMail({
                 from: 'StudyNotion || CodeHelp - by Shreya',
-                to: `${email}`, // list of receivers
-                subject: `${title}`, // Subject line
+                to: `${email}`,
+                subject: `${title}`,
                 html: `${body}`,
             })
-            console.log("Email sent successfully. Info:", info);
-            return info;
+            .then(info => console.log("Email sent successfully (Async). Info:", info))
+            .catch(error => {
+                console.error("==========================================");
+                console.error("MAIL SENDER FAILED. Connection or Auth Error:");
+                console.error("==========================================");
+                console.error(error.message);
+                console.error(error);
+            });
+
+            // No return here, as the outer controller is set to proceed without waiting.
     }
     catch(error) {
-        // Log the full error for debugging in Render logs
-        console.error("MAIL SENDER ERROR: The email could not be delivered.", error);
-        console.error("Nodemailer Message:", error.message);
+        console.error("FATAL ERROR IN TRANSPORTER SETUP:", error);
     }
 }
 
