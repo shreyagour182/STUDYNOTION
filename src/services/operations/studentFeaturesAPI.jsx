@@ -15,7 +15,7 @@ import {resetCart} from "../../slices/cartSlice"
 
 // NOTE: Please replace "rzp_test_YourPublicKeyHere" with your actual Razorpay Key ID.
 // For production, this should ideally be loaded from a public environment variable (e.g., process.env.REACT_APP_RAZORPAY_KEY_ID).
-const RAZORPAY_KEY = "rzp_test_ycE9Zb9rFBYHQn";
+const RAZORPAY_KEY = "rzp_test_RPf7cDwOtAggUP";
 
 const {COURSE_PAYMENT_API ,SEND_PAYMENT_SUCCESS_EMAIL_API ,COURSE_VERIFY_API } = studentEndpoints;
 
